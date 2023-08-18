@@ -1,0 +1,48 @@
+body {
+    font-family: 'Zilla Slab', serif;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    height: fit-content;
+    width: 100%;
+    background-color: #f8f8ff;
+}
+
+h1 {
+    font-weight: 600;
+    text-align: center;
+    font-size: 6vmin;
+    width: 100%;
+    height: fit-content;
+}
+
+#chess_board {
+    margin-left: auto;
+    margin-right: auto;
+    width: 80vmin;
+    height: 80vmin;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+svg {
+    height: 100%;
+}
+
+.white_piece {
+    fill: #ffffff;
+}
+
+.square {
+    min-width: 10vmin;
+    min-height: 10vmin;
+    text-align: center;
+}
+
+.brown {
+    background-color: #964d22;
+}
+
+.white{
+    background-color: #d0d3b7;
+}
