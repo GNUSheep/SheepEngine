@@ -25,18 +25,19 @@ h1 {
     flex-wrap: wrap;
 }
 
-svg {
-    height: 100%;
-}
-
 .white_piece {
-    fill: #ffffff;
+    color: #ffffff;
 }
 
 .square {
     min-width: 10vmin;
     min-height: 10vmin;
     text-align: center;
+    position: relative;
+}
+
+.square i {
+    font-size: 10vmin;
 }
 
 .brown {
