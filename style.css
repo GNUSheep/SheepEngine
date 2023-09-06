@@ -20,30 +20,4 @@ h1 {
     margin-left: auto;
     margin-right: auto;
     width: 80vmin;
-    height: 80vmin;
-    display: flex;
-    flex-wrap: wrap;
-}
-
-.white_piece {
-    color: #ffffff;
-}
-
-.square {
-    min-width: 10vmin;
-    min-height: 10vmin;
-    text-align: center;
-    position: relative;
-}
-
-.square i {
-    font-size: 10vmin;
-}
-
-.brown {
-    background-color: #964d22;
-}
-
-.white{
-    background-color: #d0d3b7;
 }
