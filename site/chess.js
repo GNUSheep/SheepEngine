@@ -9,7 +9,6 @@ function onDragStart(square, piece) {
     moves.forEach(square => {
         var square_obj = $('#chess_board .square-' + square.to)
         square_obj.addClass('highlight1-32417')
-    //    square.classList.add('highlight1-32417')
     });
 }
 
@@ -20,7 +19,14 @@ function onDrop(source, target) {
         promotion: 'q'
     })
     
-      if (move === null) return 'snapback'
+    if (move === null) {
+        $.post("http://localhost:8080", game.fen(), (data, status) => {
+            game.move(game.moves[data])
+            console.log(status)
+        });
+
+        return 'snapback'
+    }
 }
 
 function onSnapEnd () {
