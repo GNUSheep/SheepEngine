@@ -19,14 +19,21 @@ function onDrop(source, target) {
         promotion: 'q'
     })
     
-    if (move === null) {
-        $.post("http://localhost:8080", game.fen(), (data, status) => {
-            game.move(game.moves[data])
-            console.log(status)
-        });
-
+    if (move === null) {    
         return 'snapback'
     }
+
+    $.post("http://localhost:8080", game.fen(), (data, status) => {
+        console.log(status)
+        let from = data.slice(0, 2)
+        let to = data.slice(2)
+
+        game.move({
+            from: from,
+            to: to,
+            promotion: 'q'
+        })
+    });
 }
 
 function onSnapEnd () {

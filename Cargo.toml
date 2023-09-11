@@ -9,6 +9,8 @@ edition = "2021"
 actix-web = "4"
 static-files = "0.2.3"
 actix-web-static-files = "4.0.1"
+chess = "3.2.0"
+rand = "0.8.5"
 
 [build-dependencies]
 static-files = "0.2.3"

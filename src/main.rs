@@ -1,13 +1,15 @@
 use actix_web_static_files::ResourceFiles;
-use actix_web::{App, HttpServer, HttpResponse, web, Responder, Error, post};
+use actix_web::{App, HttpServer, HttpResponse, Responder, post};
+
+mod engine;
 
 include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 
 #[post("/")]
 async fn get_fen(body: String) -> impl Responder {
-    println!("{}", body);
+    let respond = engine::make_move(body.as_str());
 
-    HttpResponse::Ok().body("0")
+    HttpResponse::Ok().body(respond)
 }
 
 #[actix_web::main]
