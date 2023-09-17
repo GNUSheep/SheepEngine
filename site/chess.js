@@ -16,7 +16,6 @@ function onDrop(source, target) {
     var move = game.move({
         from: source,
         to: target,
-        promotion: 'q'
     })
     
     if (move === null) {    
@@ -24,15 +23,15 @@ function onDrop(source, target) {
     }
 
     $.post("http://localhost:8080", game.fen(), (data, status) => {
-        console.log(status)
+        console.log(data)
         let from = data.slice(0, 2)
         let to = data.slice(2)
 
         game.move({
             from: from,
             to: to,
-            promotion: 'q'
         })
+        chess_board.position(game.fen())
     });
 }
 
