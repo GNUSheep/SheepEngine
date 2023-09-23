@@ -1,4 +1,4 @@
-var game = new Chess()
+var game = new Chess('1K6/6r1/1k6/8/8/8/8/3R4 w - - 0 1')
 
 function onDragStart(square, piece) {
     var moves = game.moves({
@@ -44,7 +44,7 @@ var config = {
     onDragStart: onDragStart,
     onDrop: onDrop,
     onSnapEnd: onSnapEnd,
-    position: 'start',
+    position: '1K6/6r1/1k6/8/8/8/8/3R4',
 }
 
 var chess_board = Chessboard('chess_board', config)
