@@ -1,5 +1,5 @@
+use actix_web::{post, App, HttpResponse, HttpServer, Responder};
 use actix_web_static_files::ResourceFiles;
-use actix_web::{App, HttpServer, HttpResponse, Responder, post};
 
 mod engine;
 
