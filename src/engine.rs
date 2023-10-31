@@ -95,13 +95,7 @@ fn get_move_value(board: Board, move_element: &ChessMove) -> i32 {
         let piece_moving_value = get_piece_type_value(piece_moving.unwrap());
         let piece_to_capture = get_piece_type_value(board.piece_on(to).unwrap());
 
-        if piece_to_capture - piece_moving_value > 0 {
-            move_guess += 10 * piece_to_capture - piece_moving_value;
-        } else if piece_to_capture - piece_moving_value == 0 {
-            move_guess += piece_to_capture - piece_moving_value;
-        } else {
-            move_guess -= 10 * piece_to_capture - piece_moving_value;
-        }
+        move_guess += 10 * piece_to_capture - piece_moving_value;
     }
 
     // Promotion
@@ -111,13 +105,13 @@ fn get_move_value(board: Board, move_element: &ChessMove) -> i32 {
         }
     }
 
-    return -1 * move_guess;
+    return move_guess;
 }
 
 fn order_moves(board: Board) -> Vec<ChessMove> {
     let mut moves: Vec<_> = MoveGen::new_legal(&board).collect();
 
-    moves.sort_by(|a, b| get_move_value(board, a).cmp(&get_move_value(board, b)));
+    moves.sort_by(|a, b| get_move_value(board, b).cmp(&get_move_value(board, a)));
 
     return moves;
 }
@@ -130,6 +124,8 @@ fn minmax(
     mut beta: f32,
     maximizing: bool,
 ) -> f32 {
+    //println!("1");
+
     if depth == 0 {
         //let start = Instant::now();
         //return checkmate_check(alpha, beta, board, fen)
@@ -138,10 +134,10 @@ fn minmax(
         //println!("Time elapsed chess_check: {:?}", duration);
         //return value
         //return evaluate_position(fen, board)
-        let start = Instant::now();
-        let value = evaluate_position(fen, board);
-        println!("{:?}", start.elapsed().as_secs_f64());
-        return value;
+        //let start = Instant::now();
+        return evaluate_position(fen, board);
+        //println!("{:?}", start.elapsed().as_secs_f64());
+        //return value;
     }
 
     //let moves: Vec<_> = MoveGen::new_legal(&board).collect();
@@ -197,6 +193,7 @@ fn minmax(
 }
 
 fn evaluate_position(fen: &str, board: Board) -> f32 {
+
     let fen_splited = fen.split(" ").collect::<Vec<_>>()[0]
         .split("/")
         .collect::<Vec<_>>();
@@ -277,8 +274,6 @@ pub fn make_move(fen: &str) -> String {
     let start = Instant::now();
     let chess_board = Board::from_str(fen).unwrap();
     //"1nbqk2r/6pp/8/r7/3p4/3p1KP1/5P1P/4q3 b k - 1 32"
-
-    //let moves = order_moves(chess_board);
 
     let (out, best_move) = search_root(3, chess_board);
     println!("Best: {}, {}", out, best_move);
