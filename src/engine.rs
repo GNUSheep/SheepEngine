@@ -1,51 +1,66 @@
-use chess::{Board, BoardStatus, ChessMove, Color, Game, GameResult, MoveGen, Piece, Rank};
-use std::borrow::Borrow;
-use std::cmp::{max, min};
+use chess::{Board, ChessMove, Color, Game, GameResult, MoveGen, Piece, Square};
 use std::str::FromStr;
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 
 mod piece_tables;
 
 static CHESS_PIECES_VALUE: [i32; 5] = [100, 320, 330, 500, 900];
 
-fn checkmate_check(mut alpha: f32, beta: f32, board: Board, fen: &str) -> f32 {
-    let evaluation = evaluate_position(fen, board);
-    if evaluation >= beta {
-        return beta;
-    }
-
-    if evaluation < alpha - 900.0 {
-        return alpha
-    }
-
-    if alpha < evaluation {
-        alpha = evaluation;
-    }
-
-    let mut moves = MoveGen::new_legal(&board);
-    let targets = board.color_combined(!board.side_to_move());
-    moves.set_iterator_mask(*targets);
-
-    let mut moves: Vec<_> = moves.collect();
-    moves.sort_by(|a, b| get_move_value(board, b).cmp(&get_move_value(board, a)));
-
-    for target in moves {
-        let new_board = board.make_move_new(target);
-        let out = -checkmate_check(-beta, -alpha, new_board, new_board.to_string().as_str());
-
-        if beta <= out {
-            return beta;
-        }
-        if alpha < out {
-            alpha = out;
-        }
-    }
-
-    return alpha;
+struct Ordering {
+    killer_moves: Vec<Vec<ChessMove>>,
 }
 
-fn search_root(depth: i32, board: Board) -> (f32, String) {
-    let moves = order_moves(board);
+impl Ordering {
+    unsafe fn init() -> Self {   
+        let killer_moves = vec![vec![ChessMove::new(Square::new(0), Square::new(0), Some(Piece::Queen)); 2]; 5];
+
+        Self{killer_moves}
+    }
+
+    fn update(&mut self, killer_move: ChessMove, depth: usize) {
+        self.killer_moves[depth][1] = self.killer_moves[depth][0];
+        self.killer_moves[depth][0] = killer_move;
+    }
+}
+
+//fn checkmate_check(mut alpha: f32, beta: f32, board: Board, fen: &str) -> f32 {
+//    let evaluation = evaluate_position(fen, board);
+//    if evaluation >= beta {
+//        return beta;
+//    }
+//
+//    if evaluation < alpha - 900.0 {
+//        return alpha
+//    }
+//
+//    if alpha < evaluation {
+//        alpha = evaluation;
+//    }
+//
+//    let mut moves = MoveGen::new_legal(&board);
+//    let targets = board.color_combined(!board.side_to_move());
+//    moves.set_iterator_mask(*targets);
+//
+//    let mut moves: Vec<_> = moves.collect();
+//    moves.sort_by(|a, b| get_move_value(board, b).cmp(&get_move_value(board, a)));
+//
+//    for target in moves {
+//        let new_board = board.make_move_new(target);
+//        let out = -checkmate_check(-beta, -alpha, new_board, new_board.to_string().as_str());
+//
+//        if beta <= out {
+//            return beta;
+//        }
+//        if alpha < out {
+//            alpha = out;
+//        }
+//    }
+//
+//    return alpha;
+//}
+
+fn search_root(depth: i32, board: Board, mut order_values: Ordering) -> (f32, String) {
+    let moves = order_moves(board, &mut order_values, depth as usize);
 
     let mut best_value = f32::INFINITY;
 
@@ -60,6 +75,7 @@ fn search_root(depth: i32, board: Board) -> (f32, String) {
             new_board,
             f32::NEG_INFINITY,
             f32::INFINITY,
+            &mut order_values,
             true,
         );
 
@@ -112,39 +128,43 @@ fn get_piece_value(piece: Piece) -> usize {
     }
 }
 
-fn get_move_value(board: Board, move_element: &ChessMove) -> i32 {
-    let mut move_guess = 0;
+fn get_move_value(board: Board, move_element: &ChessMove, order_values: &mut Ordering, depth: usize) -> i32 {
+    // 1. Captures
+    // 2. Promotions
+    // 3. Killer Moves
+
+    let move_guess = 0;
 
     let piece_moving = board.piece_on(move_element.get_source());
     let to = move_element.get_dest();
 
-    // Captures
     if board.piece_on(to) != None {
-        let piece_moving_value = get_piece_type_value(piece_moving.unwrap());
-        let piece_to_capture = get_piece_type_value(board.piece_on(to).unwrap());
-        
-        return 10 * piece_to_capture - piece_moving_value
+        let from_value = get_piece_value(piece_moving.unwrap());
+        let capture_value = get_piece_value(board.piece_on(to).unwrap());
 
-        //let from_value = get_piece_value(piece_moving.unwrap());
-        //let capture_value = get_piece_value(board.piece_on(to).unwrap());
-//
-        //return piece_tables::MVV_LVA[from_value][capture_value]
+        return piece_tables::MVV_LVA[from_value][capture_value] + 10000
+    }else{
+        if order_values.killer_moves[depth][0] == *move_element {
+            return 9000
+        }else if order_values.killer_moves[depth][1] == *move_element {
+            return 8000
+        }
     }
 
-    //// Promotion
-    //if piece_moving.unwrap() == Piece::Pawn {
-    //    if to.get_rank() == Rank::First || to.get_rank() == Rank::Eighth {
-    //        move_guess += get_piece_type_value(Piece::Queen);
-    //    }
-    //}
+    //Promotion
+    if piece_moving.unwrap() == Piece::Pawn {
+        if to.get_rank() == Rank::First || to.get_rank() == Rank::Eighth {
+            move_guess += 100000;
+        }
+    }
 
     return move_guess;
 }
 
-fn order_moves(board: Board) -> Vec<ChessMove> {
+fn order_moves(board: Board, order_values: &mut Ordering, depth: usize) -> Vec<ChessMove> {
     let mut moves: Vec<_> = MoveGen::new_legal(&board).collect();
 
-    moves.sort_by(|a, b| get_move_value(board, b).cmp(&get_move_value(board, a)));
+    moves.sort_by(|a, b| get_move_value(board, a, order_values, depth).cmp(&get_move_value(board, b, order_values, depth)));
 
     return moves;
 }
@@ -155,27 +175,26 @@ fn minmax(
     board: Board,
     mut alpha: f32,
     mut beta: f32,
+    order_values: &mut Ordering,
     maximizing: bool,
 ) -> f32 {
-    println!("1");
+    //println!("1");
+   // println!("{}", order_values.killer_moves[depth as usize][0].to_string());
 
     if depth == 0 {
         return evaluate_position(fen, board)
         //return checkmate_check(alpha, beta, board, fen)
     }
 
-    let moves = order_moves(board);
+    let moves = order_moves(board, order_values, depth as usize);
 
     if moves.len() == 0 {
         return evaluate_position(fen, board);
     }
 
     if maximizing {
-        let mut best_value = f32::NEG_INFINITY;
         for move_element in moves {
-            //let start = Instant::now();
             let new_board = board.make_move_new(move_element);
-            //println!("{:?}", start.elapsed().as_secs_f64());
 
             let out = minmax(
                 depth - 1,
@@ -183,17 +202,23 @@ fn minmax(
                 new_board,
                 alpha,
                 beta,
+                order_values,
                 false,
             );
-            best_value = best_value.max(out);
-            alpha = alpha.max(best_value);
-            if beta <= alpha {
-                return best_value;
+            if out >= beta {
+                let IsCapture = board.piece_on(move_element.get_dest());
+                if IsCapture == None {
+                    order_values.update(move_element, depth as usize);
+                }
+
+                return beta
+            }
+            if out > alpha {
+                alpha = out;
             }
         }
-        return best_value;
+        return alpha
     } else {
-        let mut best_value = f32::INFINITY;
         for move_element in moves {
             let new_board = board.make_move_new(move_element);
 
@@ -203,20 +228,27 @@ fn minmax(
                 new_board,
                 alpha,
                 beta,
+                order_values,
                 true,
             );
-            best_value = best_value.min(out);
-            beta = beta.min(best_value);
-            if beta <= alpha {
-                return best_value;
+            if out <= alpha {
+                let IsCapture = board.piece_on(move_element.get_dest());
+                if IsCapture == None {
+                    order_values.update(move_element, depth as usize);
+                }
+
+                return alpha
+            }
+            if out < beta {
+                beta = out;
             }
         }
-        return best_value;
+        return beta
     }
 }
 
 fn evaluate_position(fen: &str, board: Board) -> f32 {
-    //println!("1");
+    println!("1");
 
     let fen_splited = fen.split(" ").collect::<Vec<_>>()[0]
         .split("/")
@@ -299,7 +331,9 @@ pub fn make_move(fen: &str) -> String {
     let chess_board = Board::from_str(fen).unwrap();
     //"1nbqk2r/6pp/8/r7/3p4/3p1KP1/5P1P/4q3 b k - 1 32"
 
-    let (out, best_move) = search_root(5, chess_board);
+    let mut order_values = unsafe {Ordering::init()};
+
+    let (out, best_move) = search_root(4, chess_board, order_values);
     println!("Best: {}, {}", out, best_move);
     let duration = start.elapsed();
 
