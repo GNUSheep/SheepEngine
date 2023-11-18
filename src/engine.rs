@@ -9,14 +9,17 @@ static CHESS_PIECES_VALUE: [i32; 5] = [100, 320, 330, 500, 900];
 struct Ordering {
     killer_moves: Vec<Vec<ChessMove>>,
     best_move: ChessMove,
+    nodes: i32,
 }
 
 impl Ordering {
     unsafe fn init() -> Self {   
-        let killer_moves = vec![vec![ChessMove::new(Square::new(0), Square::new(0), Some(Piece::Queen)); 2]; 5];
+        let killer_moves = vec![vec![ChessMove::new(Square::new(0), Square::new(0), Some(Piece::Queen)); 2]; 100];
         let best_move = ChessMove::new(Square::new(0), Square::new(0), Some(Piece::Queen));
 
-        Self{killer_moves, best_move}
+        let nodes = 0;
+
+        Self{killer_moves, best_move, nodes}
     }
 
     fn update_killer(&mut self, killer_move: ChessMove, depth: usize) {
@@ -69,6 +72,7 @@ fn search_root(board: Board, mut order_values: Ordering) -> (f32, String) {
     let mut best_value = f32::INFINITY; 
     
     for depth in 1..=3 {
+        order_values.nodes = 0;
         best_value = f32::INFINITY;
         let moves = order_moves(board, &mut order_values, depth as usize);
         for move_element in moves {
@@ -89,6 +93,7 @@ fn search_root(board: Board, mut order_values: Ordering) -> (f32, String) {
                 order_values.update_best(move_element);
             }
         }
+        println!("Depth: {}, nodes: {}", depth, order_values.nodes);
     }
 
 
@@ -141,10 +146,10 @@ fn get_move_value(board: Board, move_element: &ChessMove, order_values: &mut Ord
     // 3. Promotions
     // 4. Killer Moves
 
-    let move_guess = 0;
+    let mut move_guess = 0;
 
     if move_element == &order_values.best_move {
-        return 30000
+        move_guess += 30000
     }
 
     let piece_moving = board.piece_on(move_element.get_source());
@@ -154,25 +159,28 @@ fn get_move_value(board: Board, move_element: &ChessMove, order_values: &mut Ord
         let from_value = get_piece_value(piece_moving.unwrap());
         let capture_value = get_piece_value(board.piece_on(to).unwrap());
 
-        return piece_tables::MVV_LVA[from_value][capture_value] + 10000
+        move_guess += piece_tables::MVV_LVA[from_value][capture_value] + 10000
     }else{
         if order_values.killer_moves[depth][0] == *move_element {
-            return 9000
+            move_guess += 9000
         }else if order_values.killer_moves[depth][1] == *move_element {
-            return 8000
+            move_guess += 8000
         }
     }
 
-    return move_guess;
+    if board.side_to_move() == Color::Black {
+        return -move_guess
+    }
+    return move_guess
 }
 
 fn order_moves(board: Board, order_values: &mut Ordering, depth: usize) -> Vec<ChessMove> {
     let mut moves: Vec<_> = MoveGen::new_legal(&board).collect();
 
-    if depth % 2 == 0 {
-        moves.sort_by(|b, a| get_move_value(board, a, order_values, depth).cmp(&get_move_value(board, b, order_values, depth)));
-    }else{
+    if board.side_to_move() == Color::Black {
         moves.sort_by(|a, b| get_move_value(board, a, order_values, depth).cmp(&get_move_value(board, b, order_values, depth)));
+    }else{
+        moves.sort_by(|b, a| get_move_value(board, a, order_values, depth).cmp(&get_move_value(board, b, order_values, depth)));
     }
 
     return moves;
@@ -190,6 +198,8 @@ fn minmax(
     //println!("1");
    // println!("{}", order_values.killer_moves[depth as usize][0].to_string());
 
+   order_values.nodes += 1;
+
     if depth == 0 {
         return evaluate_position(fen, board)
         //return checkmate_check(alpha, beta, board, fen)
@@ -200,6 +210,7 @@ fn minmax(
     if moves.len() == 0 {
         return evaluate_position(fen, board);
     }
+
 
     if maximizing {
         for move_element in moves {
@@ -328,11 +339,7 @@ fn evaluate_position(fen: &str, board: Board) -> f32 {
         }
     }
 
-    if board.side_to_move() == Color::Black {
-        return (-1 * (white_evaluation - black_evaluation)) as f32;
-    } else {
-        return (white_evaluation - black_evaluation) as f32;
-    }
+    return (white_evaluation - black_evaluation) as f32;
 }
 
 pub fn make_move(fen: &str) -> String {
