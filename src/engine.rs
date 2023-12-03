@@ -32,7 +32,7 @@ impl Ordering {
     }
 }
 
-//fn checkmate_check(mut alpha: f32, beta: f32, board: Board, fen: &str) -> f32 {
+//fn checkmate_check(mut alpha: f32, beta: f32, board: Board, fen: &str, order_values: &mut Ordering) -> f32 {
 //    let evaluation = evaluate_position(fen, board);
 //    if evaluation >= beta {
 //        return beta;
@@ -51,11 +51,15 @@ impl Ordering {
 //    moves.set_iterator_mask(*targets);
 //
 //    let mut moves: Vec<_> = moves.collect();
-//    moves.sort_by(|a, b| get_move_value(board, b).cmp(&get_move_value(board, a)));
+//    if board.side_to_move() == Color::Black {
+//        moves.sort_by(|a, b| get_move_value(board, a, order_values, 0).cmp(&get_move_value(board, b, order_values, 0)));
+//    }else{
+//        moves.sort_by(|b, a| get_move_value(board, a, order_values, 0).cmp(&get_move_value(board, b, order_values, 0)));
+//    }
 //
 //    for target in moves {
 //        let new_board = board.make_move_new(target);
-//        let out = -checkmate_check(-beta, -alpha, new_board, new_board.to_string().as_str());
+//        let out = -checkmate_check(-beta, -alpha, new_board, new_board.to_string().as_str(), order_values);
 //
 //        if beta <= out {
 //            return beta;
@@ -67,33 +71,50 @@ impl Ordering {
 //
 //    return alpha;
 //}
-
+//
 fn search_root(board: Board, mut order_values: Ordering) -> (f32, String) {
-    let mut best_value = f32::INFINITY; 
+    let start = Instant::now();
+    let mut best_value = 0.0;
     
-    for depth in 1..=3 {
+    for depth in 1..=256 {
         order_values.nodes = 0;
-        best_value = f32::INFINITY;
+
+        best_value = f32::NEG_INFINITY; 
+        let maximizing = board.side_to_move() == Color::White;
+        if !maximizing {
+            best_value = f32::INFINITY
+        }
+        
         let moves = order_moves(board, &mut order_values, depth as usize);
         for move_element in moves {
             let new_board = board.make_move_new(move_element);
     
-            let out = minmax(
-                depth - 1,
-                new_board.to_string().as_str(),
-                new_board,
-                f32::NEG_INFINITY,
-                f32::INFINITY,
-                &mut order_values,
-                true,
-            );
+            let game: Game = Game::from_str(new_board.to_string().as_str()).expect("Valid FEN");
+            let out;
+
+            if game.can_declare_draw() {
+                out = 0.0;
+            }else{
+                out = minmax(
+                    depth - 1,
+                    new_board.to_string().as_str(),
+                    new_board,
+                    f32::NEG_INFINITY,
+                    f32::INFINITY,
+                    &mut order_values,
+                    !maximizing,
+                );
+            }
     
-            if out <= best_value {
+            if !maximizing && out <= best_value {
+                best_value = out;
+                order_values.update_best(move_element);
+            }else if maximizing && out >= best_value {
                 best_value = out;
                 order_values.update_best(move_element);
             }
         }
-        println!("Depth: {}, nodes: {}", depth, order_values.nodes);
+        println!("Depth: {}, nodes: {}, time: {:?}", depth, order_values.nodes, start.elapsed());
     }
 
 
@@ -202,7 +223,7 @@ fn minmax(
 
     if depth == 0 {
         return evaluate_position(fen, board)
-        //return checkmate_check(alpha, beta, board, fen)
+        //return checkmate_check(alpha, beta, board, fen, order_values)
     }
 
     let moves = order_moves(board, order_values, depth as usize);
@@ -343,17 +364,17 @@ fn evaluate_position(fen: &str, board: Board) -> f32 {
 }
 
 pub fn make_move(fen: &str) -> String {
-    let start = Instant::now();
+    //let start = Instant::now();
     let chess_board = Board::from_str(fen).unwrap();
     //"1nbqk2r/6pp/8/r7/3p4/3p1KP1/5P1P/4q3 b k - 1 32"
 
     let mut order_values = unsafe {Ordering::init()};
 
     let (out, best_move) = search_root(chess_board, order_values);
-    println!("Best: {}, {}", out, best_move);
-    let duration = start.elapsed();
+    //println!("Best: {}, {}", out, best_move);
+    //let duration = start.elapsed();
 
-    println!("Time elapsed: {:?}", duration);
+    //println!("Time elapsed: {:?}", duration);
 
     return best_move;
 }
