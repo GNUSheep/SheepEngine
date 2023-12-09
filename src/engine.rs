@@ -1,4 +1,4 @@
-use chess::{Board, ChessMove, Color, Game, GameResult, MoveGen, Piece, Square, Rank};
+use chess::{Board, ChessMove, Color, Game, GameResult, MoveGen, Piece, Square};
 use std::str::FromStr;
 use std::time::{Instant};
 
@@ -76,7 +76,7 @@ fn search_root(board: Board, mut order_values: Ordering) -> (f32, String) {
     let start = Instant::now();
     let mut best_value = 0.0;
     
-    for depth in 1..=256 {
+    for depth in 1..=4 {
         order_values.nodes = 0;
 
         best_value = f32::NEG_INFINITY; 
@@ -288,6 +288,66 @@ fn minmax(
     }
 }
 
+fn evaluatePawns(board: Board) -> (i32, i32) {
+    let pawns = board.pieces(Piece::Pawn);
+
+    let mut w_eval = 0;
+    let mut b_eval = 0;
+
+    for pawn in pawns.into_iter() {
+        let mut left_to_prom: i32 = pawn.get_rank().to_index().try_into().unwrap();
+        let color = board.color_on(pawn).unwrap();
+        if color == Color::White {
+            left_to_prom *= -1;
+            left_to_prom += 7;
+        }
+    
+        let mut square = pawn;
+        let mut is_passed = true;
+        for _ in 0..left_to_prom {
+            if color == Color::White {
+                square = square.up().unwrap();
+            }else {
+                square = square.down().unwrap();
+            }
+    
+            // up
+            if board.piece_on(square)!= None {
+                // doubled
+                if board.color_on(square) == Some(color) {
+                    if color == Color::White {
+                        w_eval -= 50;
+                    }else {b_eval -= 50};       
+                }
+                is_passed = false;
+            }
+
+            // left 
+            let square_left = square.left();
+            if !square_left.is_none() {
+                if board.piece_on(square_left.unwrap()) != None && board.color_on(square_left.unwrap()) == Some(!color) {
+                    is_passed = false;
+                }
+            }
+
+            let square_right = square.right();
+            if !square_right.is_none() {
+                if board.piece_on(square_right.unwrap()) != None && board.color_on(square_right.unwrap()) == Some(!color) {
+                    is_passed = false;
+                }
+            }
+        }
+
+        if is_passed {
+            if color == Color::White {
+                w_eval += piece_tables::PASSED_PAWN_BONUS[left_to_prom as usize];
+            }else{b_eval += piece_tables::PASSED_PAWN_BONUS[left_to_prom as usize]};
+        }
+    }
+
+    return (w_eval, b_eval)
+}
+
 fn evaluate_position(fen: &str, board: Board) -> f32 {
     //println!("1");
 
@@ -348,6 +408,10 @@ fn evaluate_position(fen: &str, board: Board) -> f32 {
         }
     }
 
+    let (pawns_white_eval, pawns_black_eval) = evaluatePawns(board);
+    white_evaluation += pawns_white_eval;
+    black_evaluation += pawns_black_eval;
+
     let game: Game = Game::from_str(fen).expect("Valid FEN");
     let status = game.result();
     if status != None {
@@ -371,10 +435,6 @@ pub fn make_move(fen: &str) -> String {
     let mut order_values = unsafe {Ordering::init()};
 
     let (out, best_move) = search_root(chess_board, order_values);
-    //println!("Best: {}, {}", out, best_move);
-    //let duration = start.elapsed();
-
-    //println!("Time elapsed: {:?}", duration);
 
     return best_move;
 }

@@ -51,8 +51,12 @@ fn uci() {
                         game.make_move(ChessMove::from_str(move_element).unwrap());
                     }
                 }else if command_splited[1] == "fen" {
-                    let (command, fen) = command.trim().split_at(13);
-                    game = Game::from_str(fen).expect("Valid FEN");
+                    let mut fen = String::new();
+                    for element in command_splited.iter().skip(2) {
+                        fen += &(" ".to_string() + element);
+                    }
+                    let _ = fen.remove(0);
+                    game = Game::from_str(&fen).expect("Valid FEN");
                 }
             },
             "go" => {
