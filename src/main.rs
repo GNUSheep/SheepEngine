@@ -1,9 +1,9 @@
 use actix_web::{post, App, HttpResponse, HttpServer, Responder};
 use actix_web_static_files::ResourceFiles;
+use chess::ChessMove;
+use chess::Game;
 use std::io::stdin;
 use std::str::FromStr;
-use chess::Game;
-use chess::ChessMove;
 
 mod engine;
 
@@ -33,11 +33,13 @@ fn uci() {
     println!("id name SheepEngine");
     println!("id author GNUSheep");
     println!("uciok");
-    
+
     let mut game = Game::new();
-    while true {
+    loop {
         let mut command = String::new();
-        stdin().read_line(&mut command).expect("Error invalid input");
+        stdin()
+            .read_line(&mut command)
+            .expect("Error invalid input");
 
         let command_splited: Vec<&str> = command.trim().split(" ").collect();
 
@@ -50,7 +52,7 @@ fn uci() {
                     for move_element in command_splited.iter().skip(3) {
                         game.make_move(ChessMove::from_str(move_element).unwrap());
                     }
-                }else if command_splited[1] == "fen" {
+                } else if command_splited[1] == "fen" {
                     let mut fen = String::new();
                     for element in command_splited.iter().skip(2) {
                         fen += &(" ".to_string() + element);
@@ -58,11 +60,11 @@ fn uci() {
                     let _ = fen.remove(0);
                     game = Game::from_str(&fen).expect("Valid FEN");
                 }
-            },
+            }
             "go" => {
                 let best_move = engine::make_move(game.current_position().to_string().as_str());
                 println!("bestmove {}", best_move.to_string());
-            },
+            }
             "quit" => break,
             _ => (),
         }
@@ -77,7 +79,7 @@ fn main() {
     if user_input.trim().eq("gui") {
         println!("localhost:8080");
         let _ = gui();
-    }else if user_input.trim().eq("uci") {
+    } else if user_input.trim().eq("uci") {
         uci();
     }
 }

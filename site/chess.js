@@ -1,8 +1,4 @@
-//var game = new Chess('1nbqk2r/6pp/8/r7/3p4/3p2P1/5PKP/4q3 w k - 1 32')
-// 8/3r4/1p2r2p/1k4pK/7P/4b3/6P1/8 b - - 0 54
-//var game = new Chess('r1b1r1k1/ppb1nNp1/2pp3p/P6Q/1P1PP1q1/8/5PPP/R1B1R1K1 b - - 0 1')
-//var game = new Chess('r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w - - 0 1')
-var game = new Chess('r3k2r/p1ppqpb1/bn2pnp1/4N3/1p1PP2p/2N2Q2/PPPBBPPP/R3K2R b KQkq - 0 1')
+var game = new Chess()
 
 function onDragStart(square, piece) {
     var moves = game.moves({
@@ -50,9 +46,7 @@ var config = {
     onDragStart: onDragStart,
     onDrop: onDrop,
     onSnapEnd: onSnapEnd,
-    //position: '1nbqk2r/6pp/8/r7/3p4/3p2P1/5PKP/4q3',
-    position: 'r3k2r/p1ppqpb1/bn2pnp1/4N3/1p1PP2p/2N2Q2/PPPBBPPP/R3K2R',
-  //  position: 'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R',
+    position: 'start',
 }
 
 var chess_board = Chessboard('chess_board', config)
